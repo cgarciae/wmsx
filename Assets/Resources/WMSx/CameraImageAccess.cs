@@ -4,29 +4,40 @@ using System;
 using ZXing;
 using ZXing.QrCode;
 using ZXing.Client.Result;
+using UnityEngine.UI;
 using Vuforia;
+using System.Threading;
 
 public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 	
 	public QCARBehaviour qcarBehaviour;
-	private bool isFrameFormatSet;
+	public Text _text;
+	public String text 
+	{
+		get {return _text.text;}
+		set {_text.text = value;}
+	}
 	
-	private Image cameraFeed;
+	private bool isFrameFormatSet;
+	private Vuforia.Image cameraFeed;
 	private string tempText;
 	private string qrText;
+	private float timeLastRecognition;
+	private WebCamTexture cam;
 	BarcodeReader barcodeReader = new BarcodeReader();
+	
 	
 	void Start () {
 		
 		
-		if (qcarBehaviour) {
-			qcarBehaviour.RegisterTrackerEventHandler(this);
-		}
 		WaitSeconds (1f, () => {
-			isFrameFormatSet = CameraDevice.Instance.SetFrameFormat(Image.PIXEL_FORMAT.GRAYSCALE, true);
-			print ("aca");
+			isFrameFormatSet = CameraDevice.Instance.SetFrameFormat(Vuforia.Image.PIXEL_FORMAT.GRAYSCALE, true);
+			qcarBehaviour.RegisterTrackerEventHandler(this);
 			InvokeRepeating("Autofocus", 1f, 2f);
 		});
+		
+		
+		StartCoroutine (ClearTextBehavioiur (1f));
 	}
 	
 	void WaitSeconds (float t, Action f)
@@ -43,43 +54,72 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 		f();
 	}
 	
+	
+	IEnumerator ClearTextBehavioiur (float span)
+	{
+		while (true)
+		{
+			if (Time.time > timeLastRecognition + span)
+			{
+				if (text != "")
+					text = "";
+			}
+			yield return null;
+		}
+	}
+	
 	void Autofocus () {
 		CameraDevice.Instance.SetFocusMode(CameraDevice.FocusMode.FOCUS_MODE_TRIGGERAUTO);
 	}
+	bool decoding = false;
+	Vuforia.Image image;
+	public void OnTrackablesUpdated () 
+	{
+		
+		if (! decoding)
+			StartCoroutine (Decode (0.2f));																										
+	}
 	
-	void Update () {
-		if (Input.GetKeyDown(KeyCode.Escape)) {
-			Application.Quit();
+	IEnumerator Decode(float span)
+	{
+		if (decoding)
+			yield break;
+		
+		decoding = true;
+		var to = Time.time;
+		
+		if(!isFrameFormatSet)
+		{
+			isFrameFormatSet = CameraDevice.Instance.SetFrameFormat(Vuforia.Image.PIXEL_FORMAT.GRAYSCALE, true);
 		}
-	}
-	
-	void OnGUI () {
-		GUI.Box(new Rect(0, Screen.height - 25, Screen.width, 25), qrText);
-	}
-	
-	public void OnTrackablesUpdated () {
-		try {
-			print (1);
-			if(!isFrameFormatSet) {
-				isFrameFormatSet = CameraDevice.Instance.SetFrameFormat(Image.PIXEL_FORMAT.GRAYSCALE, true);
-			}
-			print (2);
+		
+		image = CameraDevice.Instance.GetCameraImage(Vuforia.Image.PIXEL_FORMAT.GRAYSCALE);
+		
+		print (3);
+		
+		try
+		{
+			var data = barcodeReader.Decode(image.Pixels, image.Width, image.Height, RGBLuminanceSource.BitmapFormat.Gray8);
 			
-			var image = CameraDevice.Instance.GetCameraImage(Image.PIXEL_FORMAT.GRAYSCALE);
-			print (3);
-			var data = barcodeReader.Decode(image.Pixels, image.BufferWidth, image.BufferHeight, RGBLuminanceSource.BitmapFormat.Gray8);
-			print (4);
+			print ("PASO");
 			print (data.Text);
+			text = data.Text;
+			timeLastRecognition = Time.time;
+			
 		}
-		catch (Exception e) {
-			// Fail detecting QR Code!
+		catch (Exception e){
 			print (e);
 		}
 		finally {
-			if(!string.IsNullOrEmpty(tempText)) {
-				qrText = tempText;
-			}
+			
 		}
+		
+		while (Time.time < to + span)
+		{
+			yield return null;
+		}
+		
+		decoding = false;
 	}
 	
 	#region ITrackerEventHandler implementation
@@ -90,4 +130,22 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 	}
 	
 	#endregion
+	
+	public Color32[] GetColorArray(byte[] rgb565Data)
+	{
+		if (rgb565Data.Length % 1 != 0) 
+			throw new Exception("Must have an even length&quot");
+		
+		var colors = new Color32[rgb565Data.Length / 2];
+		
+		for (var i = 0; i < rgb565Data.Length; i+=2)
+		{
+			colors[i / 2] = new Color32((byte)(rgb565Data[i] & 0xF8),
+			                            (byte)(((rgb565Data[i] & 7) << 5) | ((rgb565Data[i + 1] & 0xE0) >> 3)),
+			                            (byte)((rgb565Data[i + 1] & 0x1F) & 3),
+			                            (byte)1);
+		}
+		
+		return colors;
+	}
 }
