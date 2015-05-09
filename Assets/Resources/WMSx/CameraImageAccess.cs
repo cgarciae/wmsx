@@ -86,14 +86,10 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 		}
 		
 		image = CameraDevice.Instance.GetCameraImage(Vuforia.Image.PIXEL_FORMAT.GRAYSCALE);
-																											
-	}
-	
-	void Decode()
-	{
-		while (true) {
-			
-			Thread.Sleep (200);
+		
+		Loom.RunAsync (() => {
+		
+			Thread.Sleep (100);
 			
 			decoding = true;
 			
@@ -106,17 +102,30 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 				
 				print ("PASO");
 				print (data.Text);
-				text = data.Text;
+				
+				Loom.QueueOnMainThread (() => {
+					text = data.Text;
+				});
+				
 				
 			}
 			catch (Exception e){
 				print (e);
 			}
 			finally {
-				
+				decoding = false;
 			}
 			
-			decoding = false;
+			
+		});
+																											
+	}
+	
+	void Decode()
+	{
+		while (true) {
+			
+			
 		}
 	}
 	
