@@ -14,8 +14,8 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 	public Text _text;
 	public String text 
 	{
-		get {return _text.text;}
-		set {_text.text = value;}
+		get;
+		set;
 	}
 	
 	private bool isFrameFormatSet;
@@ -36,10 +36,8 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 			InvokeRepeating("Autofocus", 1f, 2f);
 		});
 		
+		StartCoroutine (ClearTextBehavioiur(0.5f));
 		
-		//StartCoroutine (ClearTextBehavioiur (1f));
-		var thread = new Thread(Decode);
-		thread.Start();
 	}
 	
 	void WaitSeconds (float t, Action f)
@@ -75,10 +73,14 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 	}
 	bool decoding = false;
 	Vuforia.Image image;
+	Action mainThread = ()=> {};
 	public void OnTrackablesUpdated () 
 	{
 		if (decoding)
 			return;
+			
+		mainThread();
+		_text.text = text;
 			
 		if(!isFrameFormatSet)
 		{
@@ -101,11 +103,16 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 				var data = barcodeReader.Decode(image.Pixels, image.Width, image.Height, RGBLuminanceSource.BitmapFormat.Gray8);
 				
 				print ("PASO");
-				print (data.Text);
+				print ("AAA");
+				print ("BBB");
 				
-				Loom.QueueOnMainThread (() => {
-					text = data.Text;
-				});
+				mainThread = () => {
+					if (data != null)
+					{
+						text = data.Text;
+						timeLastRecognition = Time.time;
+					}
+				};
 				
 				
 			}
@@ -119,14 +126,6 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 			
 		});
 																											
-	}
-	
-	void Decode()
-	{
-		while (true) {
-			
-			
-		}
 	}
 	
 	#region ITrackerEventHandler implementation
