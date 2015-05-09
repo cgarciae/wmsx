@@ -37,7 +37,9 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 		});
 		
 		
-		StartCoroutine (ClearTextBehavioiur (1f));
+		//StartCoroutine (ClearTextBehavioiur (1f));
+		var thread = new Thread(Decode);
+		thread.Start();
 	}
 	
 	void WaitSeconds (float t, Action f)
@@ -75,51 +77,47 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 	Vuforia.Image image;
 	public void OnTrackablesUpdated () 
 	{
-		
-		if (! decoding)
-			StartCoroutine (Decode (0.2f));																										
-	}
-	
-	IEnumerator Decode(float span)
-	{
 		if (decoding)
-			yield break;
-		
-		decoding = true;
-		var to = Time.time;
-		
+			return;
+			
 		if(!isFrameFormatSet)
 		{
 			isFrameFormatSet = CameraDevice.Instance.SetFrameFormat(Vuforia.Image.PIXEL_FORMAT.GRAYSCALE, true);
 		}
 		
 		image = CameraDevice.Instance.GetCameraImage(Vuforia.Image.PIXEL_FORMAT.GRAYSCALE);
-		
-		print (3);
-		
-		try
-		{
-			var data = barcodeReader.Decode(image.Pixels, image.Width, image.Height, RGBLuminanceSource.BitmapFormat.Gray8);
+																											
+	}
+	
+	void Decode()
+	{
+		while (true) {
 			
-			print ("PASO");
-			print (data.Text);
-			text = data.Text;
-			timeLastRecognition = Time.time;
+			Thread.Sleep (200);
 			
-		}
-		catch (Exception e){
-			print (e);
-		}
-		finally {
+			decoding = true;
 			
+			
+			print (3);
+			
+			try
+			{
+				var data = barcodeReader.Decode(image.Pixels, image.Width, image.Height, RGBLuminanceSource.BitmapFormat.Gray8);
+				
+				print ("PASO");
+				print (data.Text);
+				text = data.Text;
+				
+			}
+			catch (Exception e){
+				print (e);
+			}
+			finally {
+				
+			}
+			
+			decoding = false;
 		}
-		
-		while (Time.time < to + span)
-		{
-			yield return null;
-		}
-		
-		decoding = false;
 	}
 	
 	#region ITrackerEventHandler implementation
