@@ -115,6 +115,17 @@ public static class Seq {
 		f ((A)ator.Current);
 	}
 	
+	public static IEnumerable Then (this IEnumerable e, Action f)
+	{
+		var ator = e.GetEnumerator();
+		
+		while (ator.MoveNext())
+		{
+			yield return ator.Current;
+		}
+		f ();
+	}
+	
 	public static IEnumerable Then<A> (this IEnumerable e, Func<A,IEnumerable> f)
 	{
 		var ator = e.GetEnumerator();
