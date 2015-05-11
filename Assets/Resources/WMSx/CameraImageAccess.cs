@@ -14,9 +14,11 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 	public Text _text;
 	public String text 
 	{
-		get;
-		set;
+		get {return _text.text;}
+		set {_text.text = "(" + (n).ToString() + ") " + value;}
 	}
+	
+	private int n = 0;
 	
 	private bool isFrameFormatSet;
 	private Vuforia.Image cameraFeed;
@@ -37,7 +39,14 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 		});
 		
 		StartCoroutine (ClearTextBehavioiur(0.5f));
+		Loom.RunAsync (Decode);
 		
+	}
+	
+	void Update ()
+	{
+		if (mainThread != null)
+			mainThread();
 	}
 	
 	void WaitSeconds (float t, Action f)
@@ -64,6 +73,7 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 				if (text != "")
 					text = "";
 			}
+			
 			yield return null;
 		}
 	}
@@ -79,57 +89,45 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 		if (decoding)
 			return;
 			
-		mainThread();
-		_text.text = text;
-			
 		if(!isFrameFormatSet)
 		{
 			isFrameFormatSet = CameraDevice.Instance.SetFrameFormat(Vuforia.Image.PIXEL_FORMAT.GRAYSCALE, true);
 		}
-		
 		image = CameraDevice.Instance.GetCameraImage(Vuforia.Image.PIXEL_FORMAT.GRAYSCALE);
-		
-		Loom.RunAsync (() => {
-		
-			Thread.Sleep (100);
+		decoding = true;																								
+	}
+	
+	void Decode () {
+		while (true) {
+			while (! decoding)
+				Thread.Sleep (20);
+			_Decode();
+		}
+	}
+	
+	void _Decode ()
+	{
+		try {
+			var data = barcodeReader.Decode(image.Pixels, image.Width, image.Height, RGBLuminanceSource.BitmapFormat.Gray8);
 			
-			decoding = true;
-			
-			
-			print (3);
-			
-			try
-			{
-				var data = barcodeReader.Decode(image.Pixels, image.Width, image.Height, RGBLuminanceSource.BitmapFormat.Gray8);
-				
-				print ("PASO");
-				print ("AAA");
-				print ("BBB");
-				
+			if (data != null) {
 				mainThread = () => {
-					if (data != null)
-					{
-						text = data.Text;
-						timeLastRecognition = Time.time;
-					}
+					text = data.Text;
+					timeLastRecognition = Time.time;
+					mainThread = null;
+					n++;
 				};
-				
-				
 			}
-			catch (Exception e){
-				print (e);
-			}
-			finally {
-				decoding = false;
-			}
-			
-			
-		});
-																											
+		}
+		catch (Exception e){
+			print (e);
+		}
+		finally {
+			decoding = false;
+		}
 	}
 	
 	#region ITrackerEventHandler implementation
-	
 	public void OnInitialized ()
 	{
 		//throw new System.NotImplementedException ();
