@@ -99,8 +99,9 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 	
 	void Decode () {
 		while (true) {
-			while (! decoding)
+			while (! decoding) {
 				Thread.Sleep (20);
+			}
 			_Decode();
 		}
 	}

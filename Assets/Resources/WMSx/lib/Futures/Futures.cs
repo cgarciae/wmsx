@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 
-namespace Futures
+namespace Async
 {
-	public interface Future<A>
+	public interface Future<A> : IEnumerable
 	{
 		
 		Future<B> Then<B> (Func<A,B> f);
@@ -29,7 +29,7 @@ namespace Futures
 		
 		public Future<B> Then<B> (Func<A,B> f)
 		{
-			return Then<B> ((A a) => Return (f(a)));
+			return Then<B> ((a) => Return (f(a)));
 		}
 		
 		public Future<B> Then<B> (Func<B> f)
@@ -53,30 +53,17 @@ namespace Futures
 		}
 		
 		public abstract bool completed {get;}
-	}
-	
-	public interface Future
-	{
-		Future<A> Then<A> (Func<A> f);
-		Future<A> Then<A> (Func<Future<A>> f);
-		Future Then (Action f);
-		
-		bool completed {get;}
-	}
-	
-	public abstract class FutureBase : Future
-	{
-		public abstract Future<A> Return<A> (A a);
-		public abstract Future<A> Then<A> (Func<Future<A>> f);
-		
-		Future<A> Future.Then<A> (Func<A> f)
+
+
+		#region IEnumerable implementation
+
+		public virtual IEnumerator GetEnumerator ()
 		{
-			return Then<A> (() => Return (f()));
+			while (! completed)
+				yield return null;
 		}
-		
-		public abstract Future Then (Action f);
-		
-		public abstract bool completed {get;}
+
+		#endregion
 	}
 	
 	public class Completer<A> : FutureBase<A>
@@ -129,7 +116,47 @@ namespace Futures
 			this._completed = true;
 			actions.ForEach ((Action f) => f());
 		}
+		
+		public override IEnumerator GetEnumerator ()
+		{
+			while (! completed)
+				yield return null;
+				
+			yield return _value;
+		}
 	}
+	
+	public interface Future : IEnumerable
+	{
+		Future<A> Then<A> (Func<A> f);
+		Future<A> Then<A> (Func<Future<A>> f);
+		Future Then (Action f);
+		
+		bool completed {get;}
+	}
+	
+	public abstract class FutureBase : Future
+	{
+		public abstract Future<A> Return<A> (A a);
+		public abstract Future<A> Then<A> (Func<Future<A>> f);
+		
+		Future<A> Future.Then<A> (Func<A> f)
+		{
+			return Then<A> (() => Return (f()));
+		}
+		
+		public abstract Future Then (Action f);
+		
+		public abstract bool completed {get;}
+		
+		public virtual IEnumerator GetEnumerator ()
+		{
+			while (! completed)
+				yield return null;
+		}
+	}
+	
+	
 	
 	public class Completer : FutureBase {
 		
@@ -178,6 +205,5 @@ namespace Futures
 			this._completed = true;
 			actions.ForEach ((Action f) => f());
 		}
-		
 	}
 }

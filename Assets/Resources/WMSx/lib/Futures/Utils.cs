@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 
-namespace Futures
+namespace Async
 {
 	public static class Utils
 	{
@@ -25,6 +25,10 @@ namespace Futures
 		public static Func<A,C> Compose<A,B,C> (Func<B,C> f, Func<A,B> g)
 		{
 			return (A a) => f (g (a));
+		}
+		
+		public static A Id<A> (A a) {
+			return a;
 		}
 	}
 }
