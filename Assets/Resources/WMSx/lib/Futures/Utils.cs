@@ -30,5 +30,18 @@ namespace Async
 		public static A Id<A> (A a) {
 			return a;
 		}
+		
+		public static Future<A> LoadGameObject<A> (String path) where A : MonoBehaviour
+		{
+			var future = new Completer<A> ();
+			var request = Resources.LoadAsync (path);
+			
+			Seq.WaitWhile (()=> ! request.isDone).Then (()=> {
+				var asset = request.asset as GameObject;
+				future.Complete (asset.GetComponent<A>());
+			});
+			
+			return future;
+		}
 	}
 }

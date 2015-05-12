@@ -42,6 +42,13 @@ namespace Async {
 				yield return ator.Current;
 		}
 		
+		public static IEnumerable WaitWhile (Func<bool> cond)
+		{
+			while (cond()) {
+				yield return null;
+			}
+		}
+		
 		public static IEnumerable While (Func<bool> cond, IEnumerable e)
 		{
 			var ator = e.GetEnumerator();
@@ -317,17 +324,17 @@ namespace Async {
 			return restartOnEnter ? behaviour.GetEnumerator() : _enumerator;
 		}
 		
-		public StateBehaviour (A key, Func<A, A> f, IEnumerable behaviour, bool restartOnEnter = false)
+		public StateBehaviour (A key, Func<A, A> transitionFunction, IEnumerable behaviour, bool restartOnEnter = false)
 		{
 			this.key = key;
 			this.behaviour = behaviour;
-			this.transitionFunction = f;
+			this.transitionFunction = transitionFunction;
 			this.restartOnEnter = restartOnEnter;
 			
 			_enumerator = behaviour.GetEnumerator ();
 		}
 		
-		public StateBehaviour (A key, Func<A, A> f, IEnumerable behaviour, Func<A> onFinish, bool restartOnEnter = false) : this (key, f, behaviour, restartOnEnter)
+		public StateBehaviour (A key, Func<A, A> transitionFunction, IEnumerable behaviour, Func<A> onFinish, bool restartOnEnter = false) : this (key, transitionFunction, behaviour, restartOnEnter)
 		{
 			this.transitive = true;
 			this.onFinish = onFinish;
