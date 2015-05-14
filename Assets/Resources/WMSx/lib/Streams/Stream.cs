@@ -16,6 +16,7 @@ namespace Async {
 		Stream<A> RemoveDoneHandler (Action f);
 		
 		Stream<B> Map<B> (Func<A,B> f);
+		Stream<A> Filter (Func<A,bool> cond);
 		Stream<B> Expand<B> (Func<A,Stream<B>> f, MonoBehaviour m);
 		bool done {get;}
 		}
@@ -318,6 +319,16 @@ namespace Async {
 			});
 			
 			return streamController;
+		}
+		
+		public Stream<A> Filter (Func<A, bool> cond)
+		{
+			var controller = new StreamController<A>();
+			OnData ((A a) => {
+				if (cond(a))
+					controller.Broadcast (a);
+			});
+			return controller;
 		}
 
 		public bool done {

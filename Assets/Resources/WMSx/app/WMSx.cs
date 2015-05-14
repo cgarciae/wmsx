@@ -1,12 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System;
 using Async;
 
 public class WMSx : MonoBehaviour {
 
 	public static WorkerState state = WorkerState.LoggedOut;
 	public static View view;
-	static string viewsPath = "views/prefabs/";
+	static string viewsPath = "WMSx/view/prefabs/";
 	
 	// Use this for initialization
 	void Start () 
@@ -15,29 +16,46 @@ public class WMSx : MonoBehaviour {
 		var loggedOut = new StateBehaviour<WorkerState> (
 			WorkerState.LoggedOut,
 			GetState,
-			Seq.DoNothing, false);
-		
-		loggedOut.onEnter.OnData (SetLogin);
+			Seq.Wait);
+		loggedOut.onEnter.OnData(LoadAndSet<Login> (viewsPath + "Login", null));
+		loggedOut.onEnter.OnData(()=>{
+			print ("ENTER LOGIN");
+		});
 		
 			
 		var selectingTaks = new StateBehaviour<WorkerState> (
 			WorkerState.SelectingTask,
-			GetState,
-			Seq.DoNothing);
+			(_) => state = WorkerState.Picking,
+			Seq.Wait);
+		selectingTaks.onEnter.OnData (() => {
+			print ("Enter Selecting Task");
+			SetView (null);
+		});
 			
 		var picking = new StateBehaviour<WorkerState> (
 			WorkerState.Picking,
 			GetState,
-			Seq.DoNothing);
+			Seq.Wait);
+		picking.onEnter.OnData(() => {
+			LoadAndSet<Picking> (viewsPath + "Picking", null)();
+			print ("ENTER PICKING");
+		});
+		
 			
 		var putting = new StateBehaviour<WorkerState> (
 			WorkerState.Putting,
 			GetState,
-			Seq.DoNothing);
+			Seq.Wait);
+		putting.onEnter.OnData(() => {
+			SetView(null);
+		});
 			
 		var stateMachine = new StateMachine<WorkerState> (
 			state,
 			loggedOut, selectingTaks, picking, putting);
+			
+			
+		stateMachine.Start (this);
 	}
 	
 	WorkerState GetState(WorkerState _)
@@ -49,7 +67,9 @@ public class WMSx : MonoBehaviour {
 		if (view != null)
 		{
 			view.gameObject.SetActive (false);
-			Destroy (view);
+			
+			if (view.stateless)
+				Destroy (view.gameObject);
 		}
 		
 		view = newView;
@@ -57,20 +77,56 @@ public class WMSx : MonoBehaviour {
 	
 	void SetLogin ()
 	{
-		Utils.LoadGameObject<View> (viewsPath + "Login").Then ((View v) => {
-			
-		v.New (null);
-		});
+		
 	}
 	
 	// Update is called once per frame
 	void Update () {
 	
 	}
+	
+	Action LoadAndSet<A> (string path, object info) where A : View {
+		return () => 
+		{
+			Utils.LoadGameObject<A> (path, this).Then ((A v) => {
+				v.transform.RectTransform().SetParent(this.transform);
+				v.transform.ResetCoordinates();
+				v.New (info);
+				SetView (v);
+			});
+		};
+	}
 }
-
+	
+	
 public abstract class View : MonoBehaviour {
-	public abstract void New (Object _info);
+		public bool started {get; set;}
+		public abstract bool stateless {get;}
+		
+		public abstract void New (object _info);
+		
+		public void Awake () {
+			started = false;
+			ViewAwake();
+		} 
+		public void Start () {
+			started = true;
+			ViewStart();
+			ViewOnEnable();
+		}
+		
+		public abstract void ViewStart();
+		public abstract void ViewAwake();
+		public abstract void ViewOnEnable();
+		
+		public virtual void OnEnable ()
+		{
+			if (! started)
+				return;
+				
+			ViewOnEnable();
+		}
+	
 }
 
 

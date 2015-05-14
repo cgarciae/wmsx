@@ -31,17 +31,30 @@ namespace Async
 			return a;
 		}
 		
-		public static Future<A> LoadGameObject<A> (String path) where A : MonoBehaviour
+		public static Future<A> LoadGameObject<A> (String path, MonoBehaviour m) where A : MonoBehaviour
 		{
 			var future = new Completer<A> ();
 			var request = Resources.LoadAsync (path);
 			
 			Seq.WaitWhile (()=> ! request.isDone).Then (()=> {
-				var asset = request.asset as GameObject;
-				future.Complete (asset.GetComponent<A>());
-			});
+				var go = GameObject.Instantiate (request.asset) as GameObject;
+				future.Complete (go.GetComponent<A>());
+			})
+			.Start(m);
 			
 			return future;
+		}
+		
+		public static void ResetCoordinates (this Transform t)
+		{
+			t.localPosition = Vector3.zero;
+			t.localScale = Vector3.one;
+			t.localRotation = Quaternion.identity;
+		}
+		
+		public static RectTransform RectTransform (this Transform t)
+		{
+			return (RectTransform)t;
 		}
 	}
 }
