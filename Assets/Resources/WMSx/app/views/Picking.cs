@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine.UI;
 using System;
 using Async;
+using ZXing;
 
 
 public class Picking : View {
@@ -82,8 +83,8 @@ public class Picking : View {
 	public override void ViewAwake ()
 	{
 		decoder = DecoderQR.instance;
-		decoder.onDetection.OnData ((reco) => {
-			lastRecognition = reco;
+		decoder.onDetection.OnData ((data) => {
+			lastRecognition = data.Text;
 			timeLastRecognition = Time.time;
 		});
 	}
@@ -112,7 +113,10 @@ public class Picking : View {
 			lastRecognition == pattern &&
 			Time.time <= timeLastRecognition+ span;
 			
-		if (cond) print ("Saw " + pattern);
+		if (cond) {
+			print ("Saw " + pattern);
+			WMSx.instance.click.Play();
+		}
 		
 		return cond;
 	}

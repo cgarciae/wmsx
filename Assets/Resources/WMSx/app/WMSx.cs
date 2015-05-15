@@ -4,10 +4,18 @@ using System;
 using Async;
 
 public class WMSx : MonoBehaviour {
-
+	
+	public AudioSource click;
+	public static WMSx instance;
+	
 	public static WorkerState state = WorkerState.LoggedOut;
 	public static View view;
 	static string viewsPath = "WMSx/view/prefabs/";
+	
+	void Awake ()
+	{
+		instance = this;
+	}
 	
 	// Use this for initialization
 	void Start () 
@@ -106,6 +114,7 @@ public abstract class View : MonoBehaviour {
 		public abstract void New (object _info);
 		
 		public void Awake () {
+			
 			started = false;
 			ViewAwake();
 		} 

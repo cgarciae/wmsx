@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using System;
 using ZXing;
 using ZXing.QrCode;
@@ -8,20 +9,29 @@ using UnityEngine.UI;
 using Vuforia;
 using System.Threading;
 using Async;
+using System.Linq;
 
 public class DecoderQR : MonoBehaviour, ITrackerEventHandler {
 	
+	//STATIC
 	public static DecoderQR instance;
 	
+	//PUBLIC
+	public GUIStyle style;
 	public QCARBehaviour qcarBehaviour;
+	
+	//PRIVATE
 	private bool isFrameFormatSet;
 	BarcodeReader barcodeReader = new BarcodeReader();
 	Thread thread;
 	bool decoding = false;
-	Vuforia.Image image;
-	Func<String> mainThread = null;
+	public static Vuforia.Image image;
+	Func<Result> mainThread = null;
+	List<ResultPoint> resultPoints = new List<ResultPoint>();
 	
-	public StreamController<String> onDetection = new StreamController<String>();
+	
+	public Result lastResult;
+	public StreamController<Result> onDetection = new StreamController<Result>();
 	
 	void Awake ()
 	{
@@ -121,7 +131,9 @@ public class DecoderQR : MonoBehaviour, ITrackerEventHandler {
 				var text = data.Text;
 				mainThread = () => {
 					mainThread = null;
-					return text;
+					resultPoints = new List<ResultPoint> (data.ResultPoints);
+					//print (data.putMetadata);
+					return data;
 				};
 			}
 		}
@@ -132,6 +144,63 @@ public class DecoderQR : MonoBehaviour, ITrackerEventHandler {
 			decoding = false;
 		}
 	}
+	
+	public float dX;
+	public float dY;
+	void OnGUI ()
+	{
+		var points = resultPoints
+			.Select<ResultPoint,Vector2> (point2Vector)
+			.ToList();
+			
+		var n = 0;
+		foreach (var p in points.Take(1))
+		{
+			var rect = new Rect(p.x, p.y, 15, 15);
+			rect.center = new Vector2 (p.x, p.y);
+			GUI.Label(rect, "", style);
+			//print (String.Format ("Result {0}: {1}", n++, p));
+		}
+		
+//		print (String.Format("Camera width {0}, height {1}", image.Width, image.Height));
+//		print (String.Format("Screen width {0}, height {1}", Screen.width, Screen.height));
+		
+		
+	}
+	
+	Vector2 point2Vector (ResultPoint point)
+	{
+		var pI = ((float)DecoderQR.image.Height)/((float)DecoderQR.image.Width);
+		var pS = ((float)Screen.height)/((float)Screen.width);
+		var pxS = ((float)Screen.width)/((float)Screen.height);
+		var pxC = ((float)DecoderQR.image.Width)/((float)DecoderQR.image.Height);
+		
+		float x = point.X * Screen.width / DecoderQR.image.Width;
+		float y = point.Y * Screen.height / DecoderQR.image.Height;
+		
+		if (pxS < pxC)
+		{
+			//print ("GT");
+			var w = ((float)DecoderQR.image.Width);
+			var pwS = ((float)Screen.width)/((float)Screen.height);
+			var wS = pwS * w;
+			var dx = (w - wS)/2f;
+			var px = (point.X - dx)/wS;
+			
+			x = px * ((float)Screen.width);
+			print (String.Format("px {0}", px));
+			print (String.Format("x {0}", x));
+			//x *= 1f / pS;
+		}
+		else
+		{
+			print ("LT");
+			y *= pI;
+		}
+		return new Vector2 (x, y);
+	}
+	
+	
 	
 	#region ITrackerEventHandler implementation
 	public void OnInitialized () {}

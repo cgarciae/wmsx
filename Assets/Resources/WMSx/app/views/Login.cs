@@ -3,6 +3,8 @@ using System.Collections;
 using UnityEngine.UI;
 using System;
 using Async;
+using ZXing;
+using System.Linq;
 
 public class Login : View {
 	
@@ -21,7 +23,7 @@ public class Login : View {
 	public override void ViewStart ()
 	{
 		decoder.onDetection
-			.Filter ((String s)=> s == "login")
+			.Filter ((data)=> data.Text == "login")
 			.OnData(InitLogin);
 	}
 
@@ -45,14 +47,17 @@ public class Login : View {
 	#endregion
 	
 	bool loggedIn = false;
-	void InitLogin (String data)
+	void InitLogin (Result data)
 	{
+		
 		if (loggedIn)
 			return;
 			
+		WMSx.instance.click.Play();
+			
 		loggedIn = true;
 		
-		GetUser (data).Then ((User user) => {
+		GetUser (data.Text).Then ((User user) => {
 		
 		background.SetActive (true);
 		text.text = "Bienvenido " + user.name;
