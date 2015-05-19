@@ -20,6 +20,7 @@ public class WMSx : MonoBehaviour {
 	// Use this for initialization
 	void Start () 
 	{
+		TTS.Speak ("es", "Hola!!", 1f, 1f).Start (this);
 		//Set logout
 		var loggedOut = new StateBehaviour<WorkerState> (
 			WorkerState.LoggedOut,
@@ -64,6 +65,8 @@ public class WMSx : MonoBehaviour {
 			
 			
 		stateMachine.Start (this);
+
+
 	}
 	
 	WorkerState GetState(WorkerState _)

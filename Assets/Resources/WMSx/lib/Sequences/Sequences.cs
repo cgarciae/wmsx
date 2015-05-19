@@ -198,6 +198,11 @@ namespace Async {
 		{
 			return m.StartCoroutine (e.GetEnumerator());
 		}
+
+		public static Coroutine Start (this IEnumerator e, MonoBehaviour m)
+		{
+			return m.StartCoroutine (e);
+		}
 		
 		public static IEnumerable Cycle (IEnumerable e)
 		{
