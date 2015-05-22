@@ -6,21 +6,25 @@ using Async;
 public class WMSx : MonoBehaviour {
 	
 	public AudioSource click;
-	public static WMSx instance;
 	
-	public static WorkerState state = WorkerState.LoggedOut;
-	public static View view;
-	static string viewsPath = "WMSx/view/prefabs/";
+	private static WMSx _instance;
+	public static WMSx instance {get{return _instance;}}
+	
+	public WorkerState state = WorkerState.LoggedOut;
+	public View view;
+	private string viewsPath = "WMSx/view/prefabs/";
+	
+	private TTS tts;
 	
 	void Awake ()
 	{
-		instance = this;
+		_instance = this;
 	}
 	
 	// Use this for initialization
 	void Start () 
 	{
-		TTS.Speak ("es", "Hola!!", 1f, 1f).Start (this);
+		GetDependencies();
 		//Set logout
 		var loggedOut = new StateBehaviour<WorkerState> (
 			WorkerState.LoggedOut,
@@ -67,6 +71,12 @@ public class WMSx : MonoBehaviour {
 		stateMachine.Start (this);
 
 
+	}
+	
+	void GetDependencies()
+	{
+		if (tts == null)
+			tts = TTS.instance;
 	}
 	
 	WorkerState GetState(WorkerState _)

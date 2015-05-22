@@ -12,6 +12,9 @@ public class Login : View {
 	public Image userPhoto;
 	public Text text;
 	public GameObject background;
+	
+	private TTS tts;
+	private WMSx wmsx;
 
 	#region implemented abstract members of View
 
@@ -22,9 +25,14 @@ public class Login : View {
 
 	public override void ViewStart ()
 	{
+		GetDependencies();
+		
 		decoder.onDetection
 			.Filter ((data)=> data.Text == "login")
 			.OnData(InitLogin);
+			
+		text.text = "Enfoca tu QR personal para ingresar";
+		tts.Say (text.text);
 	}
 
 	public override void ViewAwake ()
@@ -46,10 +54,18 @@ public class Login : View {
 	
 	#endregion
 	
+	void GetDependencies()
+	{
+		if (tts == null)
+			tts = TTS.instance;
+			
+		if (wmsx == null)
+			wmsx = WMSx.instance;
+	}
+	
 	bool loggedIn = false;
 	void InitLogin (Result data)
 	{
-		
 		if (loggedIn)
 			return;
 			
@@ -61,6 +77,7 @@ public class Login : View {
 		
 		background.SetActive (true);
 		text.text = "Bienvenido " + user.name;
+		tts.Say (text.text);
 		
 		PlayerPrefs.SetString ("user", user.name);
 		PlayerPrefs.SetString ("id", user.id);
@@ -69,7 +86,7 @@ public class Login : View {
 		userPhoto.sprite = Resources.Load<Sprite> ("WMSx/view/materials/userPhoto");
 		
 		return Seq.WaitForSeconds (3f).Then<WorkerState>(() => {
-			return WMSx.state = WorkerState.SelectingTask;
+			return wmsx.state = WorkerState.SelectingTask;
 		})
 		.GetFuture<WorkerState>(this);
 		});
@@ -85,6 +102,11 @@ public class Login : View {
 		return new Completer<User>(user);
 	}
 	
+	
+}
+
+public interface ILogin
+{
 	
 }
 

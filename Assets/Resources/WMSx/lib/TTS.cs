@@ -30,18 +30,20 @@ using System;
  * 
  */
 
-public class TTS : MonoBehaviour {
+public class TTS : MonoBehaviour, ITTS {
+
+	public static TTS instance;
 	
 	public AudioSource source;
-	public static TTS instance;
-	static bool loading = false;
+	
+	bool loading = false;
 	
 	public void Awake ()
 	{
 		instance = this;
 	}
 	
-	public static IEnumerable Speak (string lang, string words, float pitch = 1f, float volume = 1f)
+	public IEnumerable Speak (string words, string lang = "es", float pitch = 1f, float volume = 1f)
 	{
 		WWW www = null;
 
@@ -61,8 +63,14 @@ public class TTS : MonoBehaviour {
 		});
 	}
 	
-	public static void Say (string lang, string words, float pitch = 1f, float volume = 1f)
+	public void Say (string words, string lang = "es", float pitch = 1f, float volume = 1f)
 	{
-		Speak (lang, words, pitch, volume).Start (instance);
+		Speak (words, lang, pitch, volume).Start (this);
 	}
+}
+
+public interface ITTS
+{
+	IEnumerable Speak (string words, string lang = "es", float pitch = 1f, float volume = 1f);
+	void Say (string words, string lang = "es", float pitch = 1f, float volume = 1f);
 }

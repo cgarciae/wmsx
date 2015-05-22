@@ -14,6 +14,8 @@ public class Picking : View {
 	public Text text;
 	public GameObject background;
 	
+	WMSx wmsx;
+	ITTS tts;
 	DecoderQR decoder;
 	PickingState state = PickingState.FindingLocation;
 	StateMachine<PickingState> stateMachine;
@@ -33,6 +35,8 @@ public class Picking : View {
 
 	public override void ViewStart ()
 	{
+		GetDependencies();
+		
 		var findingLocation = new StateBehaviour<PickingState> (
 			PickingState.FindingLocation,
 			GetState,
@@ -49,6 +53,7 @@ public class Picking : View {
 			}
 			//Set View
 			text.text = String.Format("Ve a la ubicacion {0}", currentLocation.id);
+			tts.Say (text.text);
 			imagen.sprite = Resources.Load<Sprite> ("WMSx/view/materials/mapas/" +  currentLocation.id);
 		});
 		
@@ -64,6 +69,7 @@ public class Picking : View {
 			findingPutLocationBehaviour);
 		findingPutLocation.onEnter.OnData(() => {
 			text.text = String.Format("Ve a la ubicacion {0}", task.putLocation.id);
+			tts.Say (text.text);
 			imagen.sprite = Resources.Load<Sprite> ("WMSx/view/materials/mapas/" +  task.putLocation.id);
 		});
 			
@@ -78,6 +84,18 @@ public class Picking : View {
 			locations = ts.locations.GetEnumerator();
 			stateMachine.Start(this);
 		});
+	}
+	
+	void GetDependencies()
+	{
+		if (wmsx == null)
+			wmsx = WMSx.instance;
+			
+		if (decoder == null)
+			decoder = DecoderQR.instance;
+			
+		if (tts == null)
+			tts = TTS.instance;
 	}
 
 	public override void ViewAwake ()
@@ -133,6 +151,7 @@ public class Picking : View {
 	IEnumerable findingProductsBehaviour {get{
 		return Seq.DoNothing.Then (() => currentLocation.products.Expand ((Product product) => {
 			text.text = String.Format("Busca el producto {0} - {1}", product.name, product.id);
+			tts.Say (text.text);
 			imagen.sprite = Resources.Load<Sprite> ("WMSx/view/materials/productos/" +  product.id);
 			
 			return Seq.WaitWhile(() => ! RecentlySaw (product.id, 0.5f));
@@ -149,7 +168,7 @@ public class Picking : View {
 		return Seq.KeepDoing(() => {
 			if (RecentlySaw (task.putLocation.id, 0.5f))
 			{
-				WMSx.state = WorkerState.LoggedOut;
+				wmsx.state = WorkerState.LoggedOut;
 			}
 		});
 	}}
