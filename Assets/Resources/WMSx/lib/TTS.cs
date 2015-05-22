@@ -57,9 +57,13 @@ public class TTS : MonoBehaviour, ITTS {
 		})
 		.Then (Seq.WaitWhile (() => ! www.isDone))
 		.Then (() => {
-			print ("LOAD FINISH");
+			print (String.Format("Saying: {0}", words));
 			instance.source.clip = www.GetAudioClip(false, true, AudioType.MPEG);
 			instance.source.Play();
+			return Seq.WaitForSeconds (0.1f);
+		})
+		.Then (() => {
+			loading = false;
 		});
 	}
 	

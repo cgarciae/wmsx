@@ -28,6 +28,7 @@ public class DecoderQR : MonoBehaviour, ITrackerEventHandler {
 	public static Vuforia.Image image;
 	Func<Result> mainThread = null;
 	List<ResultPoint> resultPoints = new List<ResultPoint>();
+	float timeLastRecognition = -10000000000000f;
 	
 	
 	public Result lastResult;
@@ -131,8 +132,8 @@ public class DecoderQR : MonoBehaviour, ITrackerEventHandler {
 				var text = data.Text;
 				mainThread = () => {
 					mainThread = null;
+					timeLastRecognition = Time.time;
 					resultPoints = new List<ResultPoint> (data.ResultPoints);
-					//print (data.putMetadata);
 					return data;
 				};
 			}
@@ -149,17 +150,24 @@ public class DecoderQR : MonoBehaviour, ITrackerEventHandler {
 	public float dY;
 	void OnGUI ()
 	{
+		if (resultPoints == null || resultPoints.Count < 3)
+			return;
+			
+		if (Time.time > timeLastRecognition + 1f)
+			return;
+		
 		var points = resultPoints
 			.Select<ResultPoint,Vector2> (point2Vector)
 			.ToList();
 			
 		var n = 0;
-		foreach (var p in points.Take(1))
+		var p = (points[0] + points[2]) / 2f;
+		//foreach (var p in points)
 		{
-			var rect = new Rect(p.x, p.y, 15, 15);
+			var rect = new Rect(p.x, p.y, 100, 100);
 			rect.center = new Vector2 (p.x, p.y);
 			GUI.Label(rect, "", style);
-			//print (String.Format ("Result {0}: {1}", n++, p));
+			//print (String.Format("x {0}, y {1}", p.x, p.y));
 		}
 		
 //		print (String.Format("Camera width {0}, height {1}", image.Width, image.Height));
@@ -170,32 +178,31 @@ public class DecoderQR : MonoBehaviour, ITrackerEventHandler {
 	
 	Vector2 point2Vector (ResultPoint point)
 	{
-		var pI = ((float)DecoderQR.image.Height)/((float)DecoderQR.image.Width);
-		var pS = ((float)Screen.height)/((float)Screen.width);
-		var pxS = ((float)Screen.width)/((float)Screen.height);
-		var pxC = ((float)DecoderQR.image.Width)/((float)DecoderQR.image.Height);
+		var imageHeight = ((float)DecoderQR.image.Height);
+		var imageWidth = ((float)DecoderQR.image.Width);
+		var screenHeight = ((float)Screen.height);
+		var screenWidth = ((float)Screen.width);
+		
+		var imageProportions = imageHeight / imageWidth;
+		var screenProportions = screenHeight / screenWidth;
 		
 		float x = point.X * Screen.width / DecoderQR.image.Width;
 		float y = point.Y * Screen.height / DecoderQR.image.Height;
 		
-		if (pxS < pxC)
+		if (screenProportions > imageProportions)
 		{
-			//print ("GT");
-			var w = ((float)DecoderQR.image.Width);
-			var pwS = ((float)Screen.width)/((float)Screen.height);
-			var wS = pwS * w;
-			var dx = (w - wS)/2f;
-			var px = (point.X - dx)/wS;
-			
-			x = px * ((float)Screen.width);
-			print (String.Format("px {0}", px));
-			print (String.Format("x {0}", x));
-			//x *= 1f / pS;
+			//imageHeight = imageWidth * p;
+			var p = imageHeight / screenHeight;
+			var transformedScreenWidth = screenWidth * p;
+			var offset = (imageWidth - transformedScreenWidth) / 2f;
+			x = (point.X - offset) / p;
 		}
 		else
 		{
-			print ("LT");
-			y *= pI;
+			var p = imageWidth / screenWidth;
+			var transformedScreenHeight = screenHeight * p;
+			var offset = (imageHeight - transformedScreenHeight) / 2f;
+			y = (point.Y - offset) / p;
 		}
 		return new Vector2 (x, y);
 	}

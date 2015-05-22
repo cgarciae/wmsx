@@ -37,7 +37,6 @@ public class Login : View {
 
 	public override void ViewAwake ()
 	{
-		decoder = DecoderQR.instance;
 		userPhoto.gameObject.SetActive (false);
 	}
 
@@ -61,6 +60,9 @@ public class Login : View {
 			
 		if (wmsx == null)
 			wmsx = WMSx.instance;
+			
+		if (decoder == null)
+			decoder = DecoderQR.instance;
 	}
 	
 	bool loggedIn = false;
@@ -69,7 +71,7 @@ public class Login : View {
 		if (loggedIn)
 			return;
 			
-		WMSx.instance.click.Play();
+		//wmsx.click.Play();
 			
 		loggedIn = true;
 		
@@ -77,6 +79,7 @@ public class Login : View {
 		
 		background.SetActive (true);
 		text.text = "Bienvenido " + user.name;
+		print ("FOUND USER");
 		tts.Say (text.text);
 		
 		PlayerPrefs.SetString ("user", user.name);
