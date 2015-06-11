@@ -47,6 +47,8 @@ public class TTS : MonoBehaviour, ITTS {
 	{
 		WWW www = null;
 
+		Action<String> f = (String s) => {};
+
 		return Seq.WaitWhile(() => loading)
 		.Then(() => {
 			loading = true;
