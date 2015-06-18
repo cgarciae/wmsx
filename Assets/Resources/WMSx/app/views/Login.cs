@@ -9,9 +9,8 @@ using System.Linq;
 public class Login : View {
 	
 	public DecoderQR decoder;
-	public Image userPhoto;
-	public Text text;
-	public GameObject background;
+
+	public GUIPanel gui;
 	
 	private TTS tts;
 	private WMSx wmsx;
@@ -26,18 +25,22 @@ public class Login : View {
 	public override void ViewStart ()
 	{
 		GetDependencies();
-		
+
+		gui.showImage = false;
+		gui.status.text = "Login";
+		gui.quantity.text = "";
+
 		decoder.onDetection
 			.Filter ((data)=> data.Text == "login")
 			.OnData(InitLogin);
 			
-		text.text = "Enfoca tu QR personal para ingresar";
-		tts.Say (text.text);
+		gui.text.text = "Enfoca tu QR personal para ingresar";
+		tts.Say (gui.text.text);
 	}
 
 	public override void ViewAwake ()
 	{
-		userPhoto.gameObject.SetActive (false);
+
 	}
 
 	public override void ViewOnEnable ()
@@ -63,6 +66,9 @@ public class Login : View {
 			
 		if (decoder == null)
 			decoder = DecoderQR.instance;
+
+		if (gui == null)
+			gui = GUIPanel.instance;
 	}
 	
 	bool loggedIn = false;
@@ -77,16 +83,16 @@ public class Login : View {
 		
 		GetUser (data.Text).Then ((User user) => {
 		
-		background.SetActive (true);
-		text.text = "Bienvenido " + user.name;
+		
+		gui.text.text = "Bienvenido " + user.name;
 		print ("FOUND USER");
-		tts.Say (text.text);
+		tts.Say (gui.text.text);
 		
 		PlayerPrefs.SetString ("user", user.name);
 		PlayerPrefs.SetString ("id", user.id);
 		
-		userPhoto.gameObject.SetActive (true);
-		userPhoto.sprite = Resources.Load<Sprite> ("WMSx/view/materials/userPhoto");
+		gui.showImage = true;
+		gui.sprite = Resources.Load<Sprite> ("WMSx/view/materials/userPhoto");
 		
 		return Seq.WaitForSeconds (3f).Then<WorkerState>(() => {
 			return wmsx.state = WorkerState.SelectingTask;

@@ -10,9 +10,7 @@ using ZXing;
 public class Picking : View {
 	
 	
-	public Image imagen;
-	public Text text;
-	public GameObject background;
+	public GUIPanel gui;
 	
 	WMSx wmsx;
 	ITTS tts;
@@ -36,6 +34,8 @@ public class Picking : View {
 	public override void ViewStart ()
 	{
 		GetDependencies();
+
+		int remainingLocations = 0;
 		
 		var findingLocation = new StateBehaviour<PickingState> (
 			PickingState.FindingLocation,
@@ -44,6 +44,8 @@ public class Picking : View {
 			true);
 		findingLocation.onEnter.OnData (() => {
 			print ("FINDIND LOCATION");
+			gui.status.text = "Buscando Ubicacion";
+			gui.quantity.text = remainingLocations.ToString();
 			//Siguiente Taks, salirse si era la ultima
 			if (! locations.MoveNext())
 			{
@@ -52,9 +54,13 @@ public class Picking : View {
 				return;
 			}
 			//Set View
-			text.text = String.Format("Ve a la ubicacion {0}", currentLocation.id);
-			tts.Say (text.text);
-			imagen.sprite = Resources.Load<Sprite> ("WMSx/view/materials/mapas/" +  currentLocation.id);
+			gui.text.text = String.Format("Ve a la ubicacion {0}", currentLocation.id);
+			tts.Say (gui.text.text);
+			gui.sprite = Resources.Load<Sprite> ("WMSx/view/materials/mapas/" +  currentLocation.id);
+		});
+
+		findingLocation.onExit.OnData (() => {
+			remainingLocations--;
 		});
 		
 		var findingProduct = new StateBehaviour<PickingState> (
@@ -62,15 +68,23 @@ public class Picking : View {
 			GetState,
 			findingProductsBehaviour,
 			true);
-		
+
+		findingProduct.onEnter.OnData (() => {
+			gui.status.text = "Buscando Producto";
+		});
 		
 		var findingPutLocation = new AbsorvingState<PickingState> (
 			PickingState.FindingPutLocation,
 			findingPutLocationBehaviour);
+
 		findingPutLocation.onEnter.OnData(() => {
-			text.text = String.Format("Ve a la ubicacion {0}", task.putLocation.id);
-			tts.Say (text.text);
-			imagen.sprite = Resources.Load<Sprite> ("WMSx/view/materials/mapas/" +  task.putLocation.id);
+			gui.text.text = String.Format("Ve a la ubicacion {0}", task.putLocation.id);
+
+			gui.status.text = "Putting";
+			gui.quantity.text = "";
+
+			tts.Say (gui.text.text);
+			gui.sprite = Resources.Load<Sprite> ("WMSx/view/materials/mapas/" +  task.putLocation.id);
 		});
 			
 		
@@ -82,6 +96,7 @@ public class Picking : View {
 		GetTask().Then ((ts) => {
 			task = ts;
 			locations = ts.locations.GetEnumerator();
+			remainingLocations = ts.locations.Count;
 			stateMachine.Start(this);
 		});
 	}
@@ -96,6 +111,9 @@ public class Picking : View {
 			
 		if (tts == null)
 			tts = TTS.instance;
+
+		if (gui == null)
+			gui = GUIPanel.instance;
 	}
 
 	public override void ViewAwake ()
@@ -127,9 +145,17 @@ public class Picking : View {
 	
 	bool RecentlySaw (String pattern, float span)
 	{
+
 		var cond = 
 			lastRecognition == pattern &&
 			Time.time <= timeLastRecognition+ span;
+
+
+		print (pattern);
+		print (lastRecognition);
+		print (pattern == lastRecognition);
+		print (cond);
+
 			
 		if (cond) {
 			print ("Saw " + pattern);
@@ -149,19 +175,23 @@ public class Picking : View {
 	}}
 	
 	IEnumerable findingProductsBehaviour {get{
-		return Seq.DoNothing.Then (() => currentLocation.products.Expand ((Product product) => {
-			text.text = String.Format("Busca el producto {0} - {1}", product.name, product.id);
-			tts.Say (text.text);
-			imagen.sprite = Resources.Load<Sprite> ("WMSx/view/materials/productos/" +  product.id);
-			
-			return Seq.WaitWhile(() => ! RecentlySaw (product.id, 0.5f));
-			})
-			.Then(() => {
-				print ("FIND NEXT LOCATION");
-				state = PickingState.FindingLocation;
-			})
-			.Then(Seq.Wait)
-		);
+		
+		return Seq.DoNothing.Then (() => {
+			var n = currentLocation.products.Count;
+			return currentLocation.products.Expand ((Product product) => {
+				gui.text.text = String.Format("Busca el producto {0} - {1}", product.name, product.id);
+				gui.quantity.text = (n--).ToString();
+				tts.Say (gui.text.text);
+				gui.sprite = Resources.Load<Sprite> ("WMSx/view/materials/productos/" +  product.id);
+				
+				return Seq.WaitWhile(() => ! RecentlySaw (product.id, 0.5f));
+				})
+				.Then(() => {
+					print ("FIND NEXT LOCATION");
+					state = PickingState.FindingLocation;
+				})
+				.Then(Seq.Wait);
+			});
 	}}
 	
 	IEnumerable findingPutLocationBehaviour {get{
@@ -175,14 +205,15 @@ public class Picking : View {
 	
 	Future<Task> GetTask ()
 	{
-		var p1 = new Product ("p1", "Cerveza");
-		var p2 = new Product ("p2", "Chocolate");
+		var p1 = new Product ("7706634002948", "Guante");
+		var p2 = new Product ("7702184030035", "Jeringa");
+		var p3 = new Product ("7706634000494", "Jabon");
 		
-		var l1 = new Location ("l1", new List<Product>(){p1});
-		var l2 = new Location ("l2", new List<Product>(){p2});
+		var l1 = new Location ("07010606D01", new List<Product>(){p1});
+		var l2 = new Location ("07011204B01", new List<Product>(){p2, p3});
 		
 		var locations = new List<Location> (){l1, l2};
-		var putLocation = new Location ("put");
+		var putLocation = new Location ("07052606F00");
 		
 		return new Completer<Task> (new Task (locations, putLocation));
 	}
@@ -201,6 +232,7 @@ public class Task
 	
 	public List<Location> locations;
 	public Location putLocation;
+
 	
 	
 	public Task () {}
